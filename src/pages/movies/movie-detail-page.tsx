@@ -55,7 +55,7 @@ export function MovieDetailPage() {
   if (!isValidMovieId) {
     return (
       <main className="mx-auto w-[1440px] max-w-full px-20 py-6">
-        <p className="text-gray-500">올바르지 않은 영화 번호예요.</p>
+        <p className="text-gray-500">올바르지 않은 영화 번호예요!!</p>
       </main>
     );
   }

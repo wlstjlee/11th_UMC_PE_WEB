@@ -47,7 +47,7 @@ export function MovieListPage() {
     <main className="mx-auto box-border flex min-h-[1185px] w-[1440px] max-w-full flex-col items-start gap-5 px-20 py-6">
       <h1 className="m-0 text-[28px] font-bold text-gray-900">영화 목록</h1>
 
-      {isLoading && <p className="text-gray-500">불러오는 중...</p>}
+      {isLoading && <p className="text-gray-500">불러오는 중........</p>}
       {errorMessage && <p className="text-red-500">{errorMessage}</p>}
 
       {!isLoading && !errorMessage && (
