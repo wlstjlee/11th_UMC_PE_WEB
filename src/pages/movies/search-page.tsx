@@ -33,7 +33,7 @@ export function SearchPage() {
         if (!ignore) setMovies(response.results);
       })
       .catch(() => {
-        if (!ignore) setErrorMessage("검색 결과를 불러오지 못했어요.");
+        if (!ignore) setErrorMessage("검색 결과를 불러오지 못했어요ㅜ");
       })
       .finally(() => {
         if (!ignore) setIsLoading(false);
