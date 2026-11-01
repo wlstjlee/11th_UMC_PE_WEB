@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import type { FormEvent } from "react";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { BookmarkButton } from "../../components/bookmark-button";
 import { searchMovies } from "../../api/movies/search-movies";
-import type { TmdbMovieListItem } from "../../api/movies/models";
 import { getTmdbPosterUrl } from "../../utils/movies/tmdb-image";
 
 export function SearchPage() {
@@ -11,38 +11,15 @@ export function SearchPage() {
   const navigate = useNavigate();
   const [inputValue, setInputValue] = useState(query ?? "");
 
-  const [movies, setMovies] = useState<TmdbMovieListItem[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const normalizedQuery = query?.trim() ?? "";
 
-  useEffect(() => {
-    let ignore = false;
-    const normalizedQuery = (query ?? "").trim();
+  const searchQuery = useQuery({
+    queryKey: ["movies", "search", { query: normalizedQuery }],
+    queryFn: () => searchMovies({ query: normalizedQuery }),
+    enabled: normalizedQuery.length > 0,
+  });
 
-    setMovies([]);
-    setErrorMessage(null);
-
-    if (!normalizedQuery) {
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
-    searchMovies({ query: normalizedQuery })
-      .then((response) => {
-        if (!ignore) setMovies(response.results);
-      })
-      .catch(() => {
-        if (!ignore) setErrorMessage("검색 결과를 불러오지 못했어요ㅜ");
-      })
-      .finally(() => {
-        if (!ignore) setIsLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [query]);
+  const movies = searchQuery.data?.results ?? [];
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -67,7 +44,7 @@ export function SearchPage() {
         </button>
       </form>
 
-      {!query ? (
+      {!normalizedQuery ? (
         <p className="text-gray-500">검색어를 입력해 주세요.</p>
       ) : (
         <>
@@ -75,10 +52,14 @@ export function SearchPage() {
             "{query}" 검색 결과
           </h1>
 
-          {isLoading && <p className="text-gray-500">검색 중...</p>}
-          {errorMessage && <p className="text-red-500">{errorMessage}</p>}
+          {searchQuery.isLoading && (
+            <p className="text-gray-500">검색 중...</p>
+          )}
+          {searchQuery.isError && (
+            <p className="text-red-500">검색 결과를 불러오지 못했어요ㅜ</p>
+          )}
 
-          {!isLoading && !errorMessage && (
+          {searchQuery.isSuccess && (
             <>
               <p className="text-gray-500">
                 {movies.length}개의 영화를 찾았어요.
