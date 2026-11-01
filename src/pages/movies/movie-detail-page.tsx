@@ -1,8 +1,7 @@
 import { Link, useParams } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { BookmarkButton } from "../../components/bookmark-button";
 import { getMovieDetail } from "../../api/movies/get-movie-detail";
-import type { TmdbMovieDetail } from "../../api/movies/models";
 import { getMovieDetailErrorMessage } from "../../utils/movies/get-movie-detail-error-message";
 import { getTmdbPosterUrl, getTmdbBackdropUrl } from "../../utils/movies/tmdb-image";
 
@@ -16,41 +15,15 @@ function formatRuntime(runtime: number | null) {
 }
 
 export function MovieDetailPage() {
-  const { movieId } = useParams({ from: "/movies/$movieId" });
-  const parsedMovieId = Number(movieId);
-  const isValidMovieId = Number.isInteger(parsedMovieId) && parsedMovieId > 0;
+  const { movieId: movieIdParam } = useParams({ from: "/movies/$movieId" });
+  const movieId = Number(movieIdParam);
+  const isValidMovieId = Number.isInteger(movieId) && movieId > 0;
 
-  const [movie, setMovie] = useState<TmdbMovieDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    let ignore = false;
-
-    setMovie(null);
-    setErrorMessage(null);
-
-    if (!isValidMovieId) {
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
-    getMovieDetail(parsedMovieId)
-      .then((response) => {
-        if (!ignore) setMovie(response);
-      })
-      .catch((error) => {
-        if (!ignore) setErrorMessage(getMovieDetailErrorMessage(error));
-      })
-      .finally(() => {
-        if (!ignore) setIsLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [parsedMovieId, isValidMovieId]);
+  const movieDetailQuery = useQuery({
+    queryKey: ["movies", "detail", movieId],
+    queryFn: () => getMovieDetail(movieId),
+    enabled: isValidMovieId,
+  });
 
   if (!isValidMovieId) {
     return (
@@ -60,7 +33,7 @@ export function MovieDetailPage() {
     );
   }
 
-  if (isLoading) {
+  if (movieDetailQuery.isPending) {
     return (
       <main className="mx-auto w-[1440px] max-w-full px-20 py-6">
         <p className="text-gray-500">불러오는 중...</p>
@@ -68,18 +41,17 @@ export function MovieDetailPage() {
     );
   }
 
-  if (errorMessage) {
+  if (movieDetailQuery.isError) {
     return (
       <main className="mx-auto w-[1440px] max-w-full px-20 py-6">
-        <p className="text-red-500">{errorMessage}</p>
+        <p className="text-red-500">
+          {getMovieDetailErrorMessage(movieDetailQuery.error)}
+        </p>
       </main>
     );
   }
 
-  if (!movie) {
-    return null;
-  }
-
+  const movie = movieDetailQuery.data;
   const backdropUrl = getTmdbBackdropUrl(movie.backdrop_path);
   const posterUrl = getTmdbPosterUrl(movie.poster_path);
 
