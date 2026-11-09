@@ -24,16 +24,22 @@ export function Header() {
         >
           검색
         </Link>
-        <span className="header__nav-item">내 정보</span>
+        <Link
+          to="/profile"
+          className="header__nav-item"
+          activeProps={{ className: "header__nav-item header__nav-item--active" }}
+        >
+          내 정보
+        </Link>
       </nav>
 
       <div className="header__actions">
         <button type="button" className="header__search-button" aria-label="검색">
           <img src="/icons/search.svg" alt="" aria-hidden="true" />
         </button>
-        <button type="button" className="header__login-button">
+        <Link to="/login" className="header__login-button">
           로그인
-        </button>
+        </Link>
       </div>
     </header>
   );
