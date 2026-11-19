@@ -1,7 +1,19 @@
 import { Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { getMe } from "@/api/members/me";
+import { useAuthStore } from "@/stores/auth-store";
 import "../header.css";
 
 export function Header() {
+  const accessToken = useAuthStore((state) => state.accessToken);
+  const meQuery = useQuery({
+    queryKey: ["members", "me"],
+    queryFn: getMe,
+    enabled: Boolean(accessToken),
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+
   return (
     <header className="header">
       <div className="header__logo">
@@ -37,9 +49,17 @@ export function Header() {
         <button type="button" className="header__search-button" aria-label="검색">
           <img src="/icons/search.svg" alt="" aria-hidden="true" />
         </button>
-        <Link to="/login" className="header__login-button">
-          로그인
-        </Link>
+        {!accessToken ? (
+          <Link to="/login" className="header__login-button">
+            로그인
+          </Link>
+        ) : meQuery.isLoading ? (
+          <span className="h-10 w-24 animate-pulse rounded-lg bg-gray-200" />
+        ) : (
+          <Link to="/profile" className="header__login-button">
+            마이페이지
+          </Link>
+        )}
       </div>
     </header>
   );

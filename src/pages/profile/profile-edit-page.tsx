@@ -1,19 +1,28 @@
-import { useState } from "react";
-
-// TODO: 내 정보 조회 API 연동 전까지 사용하는 임시 데이터
-const MOCK_PROFILE = {
-  nickname: "gs0428",
-  email: "gwangsoo@cinemalab.kr",
-};
+import { useEffect, useState } from "react";
+import { useMeQuery } from "@/hooks/use-me-query";
+import { useUpdateMeMutation } from "@/hooks/use-update-me-mutation";
 
 export function ProfileEditPage() {
-  const [nickname, setNickname] = useState(MOCK_PROFILE.nickname);
+  const meQuery = useMeQuery();
+  const updateMeMutation = useUpdateMeMutation();
+  const [nickname, setNickname] = useState("");
+
+  // 조회된 내 정보로 닉네임 입력값 초기화
+  useEffect(() => {
+    if (meQuery.data) {
+      setNickname(meQuery.data.nickname);
+    }
+  }, [meQuery.data]);
+
+  const trimmedNickname = nickname.trim();
+  const canSubmit = trimmedNickname.length >= 2 && trimmedNickname.length <= 12;
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     // 폼 제출 시 페이지 새로고침 방지
     e.preventDefault();
+    if (!canSubmit || updateMeMutation.isPending) return;
 
-    // 내 정보 수정 API 요청 추가 예정
+    updateMeMutation.mutate({ nickname: trimmedNickname });
   };
 
   const handleDeleteAccount = () => {
@@ -34,9 +43,10 @@ export function ProfileEditPage() {
         <button
           type="submit"
           form="profile-form"
-          className="box-border flex h-[42px] items-center justify-center rounded-lg bg-[#2563EB] px-4 text-sm leading-[17px] font-extrabold text-white"
+          disabled={!canSubmit || updateMeMutation.isPending}
+          className="box-border flex h-[42px] items-center justify-center rounded-lg bg-[#2563EB] px-4 text-sm leading-[17px] font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-50"
         >
-          변경사항 저장
+          {updateMeMutation.isPending ? "저장 중" : "변경사항 저장"}
         </button>
       </div>
 
@@ -80,7 +90,7 @@ export function ProfileEditPage() {
               <input
                 id="profile-email"
                 type="email"
-                value={MOCK_PROFILE.email}
+                value={meQuery.data?.email ?? ""}
                 readOnly
                 disabled
                 className="flex-1 border-none text-sm leading-[17px] text-[#17191E] outline-none disabled:cursor-not-allowed"

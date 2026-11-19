@@ -1,5 +1,10 @@
-import { useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { useLoginMutation } from "@/hooks/use-login-mutation";
+import { useAuthStore } from "@/stores/auth-store";
+
+// 이메일 형식 검사
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const DEFAULT_FORM = {
   email: "",
@@ -10,6 +15,18 @@ type DefaultFormKey = keyof typeof DEFAULT_FORM;
 
 export function LoginPage() {
   const [form, setForm] = useState(DEFAULT_FORM);
+  const loginMutation = useLoginMutation();
+  const accessToken = useAuthStore((state) => state.accessToken);
+  const navigate = useNavigate();
+
+  // 로그인된 상태에서 /login에 직접 들어오면 홈으로 이동
+  useEffect(() => {
+    if (accessToken) {
+      navigate({ to: "/" });
+    }
+  }, [accessToken, navigate]);
+
+  const canSubmit = EMAIL_REGEX.test(form.email.trim()) && form.password.length > 0;
 
   const handleChangeField = (key: DefaultFormKey, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -18,8 +35,12 @@ export function LoginPage() {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     // 폼 제출 시 페이지 새로고침 방지
     e.preventDefault();
+    if (!canSubmit || loginMutation.isPending) return;
 
-    // 로그인 API 요청 추가 예정
+    loginMutation.mutate({
+      email: form.email.trim(),
+      password: form.password,
+    });
   };
 
   return (
@@ -70,9 +91,10 @@ export function LoginPage() {
 
         <button
           type="submit"
-          className="box-border flex h-12 w-full items-center justify-center rounded-lg bg-[#2563EB] text-sm leading-[17px] font-extrabold text-white"
+          disabled={!canSubmit || loginMutation.isPending}
+          className="box-border flex h-12 w-full items-center justify-center rounded-lg bg-[#2563EB] text-sm leading-[17px] font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-50"
         >
-          로그인
+          {loginMutation.isPending ? "로그인 중" : "로그인"}
         </button>
 
         <div className="flex w-full items-end justify-center gap-1 pt-[5px]">

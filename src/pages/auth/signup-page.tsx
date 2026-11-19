@@ -2,8 +2,7 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { checkEmailDuplicate } from "@/api/members/check-email-duplicate";
 import { checkNicknameDuplicate } from "@/api/members/check-nickname-duplicate";
-import { signup } from "@/api/members/signup";
-// import { useNavigate } from "@tanstack/react-router";
+import { useSignupMutation } from "@/hooks/use-signup-mutation";
 
 const DEFAULT_DUPLICATE_CHECK = {
   isChecking: false,
@@ -112,29 +111,19 @@ export function SignupPage() {
     }
   };
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  // const navigate = useNavigate();
+  const signupMutation = useSignupMutation();
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     // 폼 제출 시 페이지 새로고침 방지
     e.preventDefault();
-    if (!canSubmit || isSubmitting) return;
 
-    setIsSubmitting(true);
-    try {
-      const response = await signup({
-        email: form.email.trim(),
-        nickname: form.nickname.trim(),
-        password: form.password,
-      });
-      alert(response.message);
-      // 로그인 페이지 연결 후 주석 해제
-      // navigate({ to: "/login" });
-    } catch {
-      alert("회원가입에 실패했어요. 다시 시도해 주세요.");
-    } finally {
-      setIsSubmitting(false);
-    }
+    if (!canSubmit || signupMutation.isPending) return;
+
+    signupMutation.mutate({
+      email: form.email.trim(),
+      nickname: form.nickname.trim(),
+      password: form.password,
+    });
   };
 
   // noValidate는 폼 제출 시 브라우저의 기본 유효성 검사를 끔
@@ -251,10 +240,10 @@ export function SignupPage() {
 
         <button
           type="submit"
-          disabled={!canSubmit || isSubmitting}
+          disabled={!canSubmit || signupMutation.isPending}
           className="box-border flex h-12 w-full items-center justify-center rounded-lg bg-[#2563EB] text-sm leading-[17px] font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isSubmitting ? "가입 중" : "가입하기"}
+          {signupMutation.isPending ? "가입 중" : "가입하기"}
         </button>
 
         <div className="flex w-full items-end justify-center gap-1">
