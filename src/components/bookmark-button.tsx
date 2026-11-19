@@ -1,4 +1,7 @@
-import { useBookmarkStore } from "../stores/bookmark-store";
+import { useNavigate } from "@tanstack/react-router";
+import { useFavoritesQuery } from "../hooks/use-favorites-query";
+import { useToggleFavoriteMutation } from "../hooks/use-toggle-favorite-mutation";
+import { useAuthStore } from "../stores/auth-store";
 import { cn } from "../utils/cn";
 
 interface BookmarkButtonProps {
@@ -7,10 +10,22 @@ interface BookmarkButtonProps {
 }
 
 export function BookmarkButton({ movieId, className }: BookmarkButtonProps) {
-  const isBookmarked = useBookmarkStore((state) =>
-    state.bookmarkedMovieIds.includes(movieId),
-  );
-  const toggleBookmark = useBookmarkStore((state) => state.toggleBookmark);
+  const navigate = useNavigate();
+  const accessToken = useAuthStore((state) => state.accessToken);
+  const favoritesQuery = useFavoritesQuery();
+  const toggleFavoriteMutation = useToggleFavoriteMutation();
+
+  const isBookmarked = favoritesQuery.data?.includes(movieId) ?? false;
+
+  const handleClick = () => {
+    if (!accessToken) {
+      navigate({ to: "/login" });
+      return;
+    }
+    if (toggleFavoriteMutation.isPending) return;
+
+    toggleFavoriteMutation.mutate({ movieId, isFavorite: isBookmarked });
+  };
 
   return (
     <button
@@ -22,7 +37,7 @@ export function BookmarkButton({ movieId, className }: BookmarkButtonProps) {
       )}
       aria-pressed={isBookmarked}
       aria-label={isBookmarked ? "북마크 해제" : "북마크 추가"}
-      onClick={() => toggleBookmark(movieId)}
+      onClick={handleClick}
     >
       <img
         className="h-6 w-6 brightness-0 invert"

@@ -1,19 +1,31 @@
 import { Link } from "@tanstack/react-router";
+import { useQueries } from "@tanstack/react-query";
 import { Pagination } from "@/components/movies/pagination";
-
-// TODO: 내 정보 조회 API 연동 전까지 사용하는 임시 데이터
-const MOCK_PROFILE = {
-  nickname: "gs0428",
-  email: "gwangsoo@cinemalab.kr",
-};
-
-const MOCK_FAVORITE_MOVIES = [
-  { id: 1, title: "스파이더맨: 브랜드 뉴 데이", releaseDate: "2026.07.29" },
-  { id: 2, title: "오디세이", releaseDate: "2026.08.05" },
-  { id: 3, title: "미니언즈 & 몬스터즈", releaseDate: "2026.07.15" },
-];
+import { BookmarkButton } from "@/components/bookmark-button";
+import { useMeQuery } from "@/hooks/use-me-query";
+import { useFavoritesQuery } from "@/hooks/use-favorites-query";
+import { getMovieDetail } from "@/api/movies/get-movie-detail";
+import { getTmdbBackdropUrl } from "@/utils/movies/tmdb-image";
 
 export function ProfilePage() {
+  const meQuery = useMeQuery();
+  const profile = meQuery.data;
+
+  const favoritesQuery = useFavoritesQuery();
+  const favoriteMovieIds = favoritesQuery.data ?? [];
+
+  // 즐겨찾기한 영화 id마다 TMDB 상세 정보를 병렬로 조회
+  const favoriteMovieQueries = useQueries({
+    queries: favoriteMovieIds.map((movieId) => ({
+      queryKey: ["movies", "detail", movieId],
+      queryFn: () => getMovieDetail(movieId),
+    })),
+  });
+
+  const favoriteMovies = favoriteMovieQueries
+    .map((query) => query.data)
+    .filter((movie) => movie !== undefined);
+
   return (
     <main className="mx-auto flex w-[1440px] max-w-full flex-col items-start gap-7 px-20 py-6">
       <div className="flex w-full items-center justify-between">
@@ -39,13 +51,13 @@ export function ProfilePage() {
             <div className="flex flex-col gap-1.5">
               <span className="text-[11px] leading-[13px] text-[#969DA8]">닉네임</span>
               <strong className="text-sm leading-[17px] font-bold text-[#17191E]">
-                {MOCK_PROFILE.nickname}
+                {profile?.nickname ?? "-"}
               </strong>
             </div>
             <div className="flex flex-col gap-1.5">
               <span className="text-[11px] leading-[13px] text-[#969DA8]">이메일</span>
               <strong className="text-sm leading-[17px] font-bold text-[#17191E]">
-                {MOCK_PROFILE.email}
+                {profile?.email ?? "-"}
               </strong>
             </div>
           </div>
@@ -55,21 +67,52 @@ export function ProfilePage() {
       <section className="flex w-full flex-col items-start gap-4">
         <h2 className="m-0 w-full text-[17px] leading-5 font-bold text-[#17191E]">내 즐겨찾기</h2>
 
-        <ul className="m-0 grid w-full list-none grid-cols-5 gap-6 p-0">
-          {MOCK_FAVORITE_MOVIES.map((movie) => (
-            <li key={movie.id} className="flex flex-col items-start gap-1">
-              <div className="aspect-[7/8] w-full rounded-[10px] bg-[#F6F7F9]" />
-              <div className="flex flex-col gap-0 pt-[5px]">
-                <h3 className="m-0 truncate text-sm leading-[17px] font-extrabold text-[#17191E]">
-                  {movie.title}
-                </h3>
-                <p className="m-0 text-xs leading-[14px] text-[#969DA8]">{movie.releaseDate}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
+        {favoritesQuery.isPending ? (
+          <p className="text-sm text-[#969DA8]">불러오는 중...</p>
+        ) : favoriteMovies.length === 0 ? (
+          <p className="text-sm text-[#969DA8]">즐겨찾기한 영화가 없어요.</p>
+        ) : (
+          <>
+            <ul className="m-0 grid w-full list-none grid-cols-5 gap-6 p-0">
+              {favoriteMovies.map((movie) => {
+                const backdropUrl = getTmdbBackdropUrl(movie.backdrop_path);
 
-        <Pagination currentPage={1} totalPages={1} onPageChange={() => {}} />
+                return (
+                  <li key={movie.id} className="flex flex-col items-start gap-1">
+                    <div className="relative aspect-[7/8] w-full overflow-hidden rounded-[10px] bg-[#F6F7F9]">
+                      <Link
+                        to="/movies/$movieId"
+                        params={{ movieId: String(movie.id) }}
+                        className="block h-full w-full"
+                      >
+                        {backdropUrl ? (
+                          <img
+                            className="block h-full w-full object-cover"
+                            src={backdropUrl}
+                            alt={`${movie.title} 이미지`}
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-xs text-[#969DA8]">
+                            이미지 없음
+                          </div>
+                        )}
+                      </Link>
+                      <BookmarkButton movieId={movie.id} className="absolute right-3 top-3" />
+                    </div>
+                    <div className="flex flex-col gap-0 pt-[5px]">
+                      <h3 className="m-0 truncate text-sm leading-[17px] font-extrabold text-[#17191E]">
+                        {movie.title}
+                      </h3>
+                      <p className="m-0 text-xs leading-[14px] text-[#969DA8]">{movie.release_date}</p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+
+            <Pagination currentPage={1} totalPages={1} onPageChange={() => {}} />
+          </>
+        )}
       </section>
     </main>
   );
